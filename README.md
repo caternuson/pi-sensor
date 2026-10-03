@@ -8,8 +8,10 @@ with Tornado as the web server.
 # Dependencies
 * [Eclipse Mosquitto](https://mosquitto.org/)
 * These are included in the repo:
-  * [Chart.js](https://www.chartjs.org/)
   * [jQuery](https://jquery.com/)
+  * [Chart.js](https://www.chartjs.org/)
+  * [date-fns](https://date-fns.org/)
+  * [chartjs-adapter-date-fns](https://github.com/chartjs/chartjs-adapter-date-fns)
 * These are needed in the Python venv:
   * [Tornado Web Server](https://pypi.org/project/tornado/)
   * [paho-mqtt](https://pypi.org/project/paho-mqtt/)
@@ -30,3 +32,9 @@ Restart service:
 sudo systemctl restart mosquitto
 ```
 
+# Python Setup
+Create a venv and install deps:
+```
+pip install tornado
+pip install paho-mqtt
+```

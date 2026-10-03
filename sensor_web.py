@@ -1,11 +1,24 @@
 import os
+import sqlite3
 import asyncio
 import tornado
+
+DB_NAME = "sensor_data.db"      # the DB file
+
 
 class MainHandler(tornado.web.RequestHandler):
 
     def get(self):
         self.render("data_plotter.html")
+
+    def post(self):
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+        for row in cursor.execute("""
+            SELECT timestamp, value FROM readings WHERE sensor = 'upstairs_bme688_temperature'
+        """):
+            self.write(f"{row[0]},{row[1]}\n")
+        conn.close()
 
 
 async def main():

@@ -3,25 +3,68 @@
 <head>
   <script src={{ static_url("js/jquery.min.js") }}></script>
   <script src={{ static_url("js/chart.umd.min.js") }}></script>
+  <script src={{ static_url("js/cdn.min.js") }}></script>
+  <script src={{ static_url("js/chartjs-adapter-date-fns.min.js") }}></script>
 </head>
 <body>
 <div>
-  <canvas id="chart"></canvas>
+  <canvas id="chart" width="800" height="400"></canvas>
 </div>
+<button id="plot">PLOT</button>
 <script>
-  const ctx = document.getElementById('chart');
+  $(document).ready(function () {
+    $("#plot").click(plotData)
+  });
 
-  new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
-      datasets: [{
-        label: '# of Votes',
-        data: [12, 19, 3, 5, 2, 3],
-        borderWidth: 1
-      }]
-    }
-  })
+  async function getData() {
+    const xdata = [];
+    const ydata = [];
+    const resp = await $.ajax({
+      url: "/",
+      type: "POST",
+      dataType: "text",
+      data: "plot",
+    })
+    console.log(resp);
+    const table = resp.split('\n').slice(1);
+    console.log(table)
+    table.forEach(row => {
+      const columns = row.split(',');
+      console.log(columns)
+      const x = columns[0];
+      const y = columns[1];
+      console.log(x, y)
+      xdata.push(x);
+      ydata.push(y);
+    });
+    console.log("returning");
+    return {xdata, ydata};
+  }
+
+  async function plotData() {
+    const data = await getData();
+    console.log(data);
+    const ctx = document.getElementById('chart');
+
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: data.xdata,
+        datasets: [{
+          label: 'Sensor Data',
+          data: data.ydata,
+        }]
+      },
+      options: {
+        scales: {
+          x: {
+            type: 'time',
+            min: '2026-10-02 00:00:00',
+          }
+        }
+      }
+    })
+  }
 </script>
 </body>
 </html>
