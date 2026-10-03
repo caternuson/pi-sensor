@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head>
+  <script src={{ static_url("js/jquery.min.js") }}></script>
+  <script src={{ static_url("js/chart.umd.min.js") }}></script>
+</head>
+<body>
+<div>
+  <canvas id="chart"></canvas>
+</div>
+<script>
+  const ctx = document.getElementById('chart');
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
+      datasets: [{
+        label: '# of Votes',
+        data: [12, 19, 3, 5, 2, 3],
+        borderWidth: 1
+      }]
+    }
+  })
+</script>
+</body>
+</html>
