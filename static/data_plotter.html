@@ -7,13 +7,40 @@
   <script src={{ static_url("js/chartjs-adapter-date-fns.min.js") }}></script>
 </head>
 <body>
+<center>
+<h1>Daily Plot</h1>
 <div>
+<button id="prev_day">PREV</button>
+<button id="today">TODAY</button>
+<button id="next_day">NEXT</button>
+</div>
+<div id="date">DATE</div>
+<div style="width:800px; height:400px">
   <canvas id="temperature_plot"></canvas>
 </div>
-<button id="plot">PLOT</button>
+</center>
+</body>
 <script>
-  $('#plot').on('click', function() {
-    plotData(['upstairs_bme688_temperature','upstairs_hdc302x_temperature']);
+  const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
+  const plotDate = new Date(today);
+
+  $( document ).ready( function() {
+    updatePlots(today);
+  });
+
+  $('#prev_day').on('click', function() {
+    plotDate.setDate(plotDate.getDate() - 1);
+    updatePlots(plotDate);
+  });
+
+  $('#today').on('click', function() {
+    plotDate.setDate(today.getDate());
+    updatePlots(plotDate);
+  });
+
+  $('#next_day').on('click', function() {
+    plotDate.setDate(plotDate.getDate() + 1);
+    updatePlots(plotDate);
   });
 
   const chartAreaBorder = {
@@ -36,6 +63,8 @@
       datasets: [],
     },
     options: {
+      responsive: true,
+      maintainAspectRatio: false,
       scales: {
         x: {
           type: 'time',
@@ -51,18 +80,28 @@
     plugins: [chartAreaBorder]
   })
 
-  async function getData(sensor) {
+  async function getData(sensor, date) {
+    data_request = {
+      sensor: sensor,
+      date: date
+    }
     return await $.ajax({
       url: "/",
       type: "POST",
       dataType: "json",
-      data: JSON.stringify(sensor)
+      data: JSON.stringify(data_request)
     })
   }
 
-  async function plotData(sensors) {
+  async function updatePlots(date) {
+    const day = date.toISOString().split('T')[0]
+
+    $('#date').text(day);
+
+    temperature_plot.data.datasets.length = 0;
+    sensors = ['upstairs_bme688_temperature','upstairs_hdc302x_temperature']
     for (const sensor of sensors) {
-      const data = await getData(sensor);
+      const data = await getData(sensor, day);
       temperature_plot.data.datasets.push(
         {
           label: sensor,
@@ -73,6 +112,7 @@
     }
     temperature_plot.update();
   }
+
 </script>
 </body>
 </html>
