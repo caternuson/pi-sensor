@@ -1,5 +1,6 @@
 import os
 import sqlite3
+import json
 import asyncio
 import tornado
 
@@ -14,8 +15,8 @@ class MainHandler(tornado.web.RequestHandler):
         sensor = self.request.body.decode('utf-8')
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
-        for row in cursor.execute(f"SELECT timestamp, value FROM {sensor}"):
-            self.write(f"{row[0]},{row[1]}\n")
+        data = [ [row[0], row[1]] for row in cursor.execute(f"SELECT timestamp, value FROM {sensor}") ]
+        self.write(json.dumps(data))
         conn.close()
 
 async def main():

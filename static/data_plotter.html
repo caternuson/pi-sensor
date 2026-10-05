@@ -52,23 +52,12 @@
   })
 
   async function getData(sensor) {
-    const data = [];
-    const resp = await $.ajax({
+    return await $.ajax({
       url: "/",
       type: "POST",
-      dataType: "text",
-      data: sensor,
+      dataType: "json",
+      data: JSON.stringify(sensor)
     })
-    //console.log(resp);
-    const table = resp.trim().split('\n').map(row => row.split(',').map(field => field.trim()));
-    //console.log(table)
-    table.forEach(row => {
-      x = row[0];
-      y = parseFloat(row[1]);
-      //console.log(x, y);
-      data.push([x,y])
-    });
-    return data;
   }
 
   async function plotData(sensors) {
