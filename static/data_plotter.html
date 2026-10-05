@@ -8,62 +8,81 @@
 </head>
 <body>
 <div>
-  <canvas id="chart" width="800" height="400"></canvas>
+  <canvas id="temperature_plot"></canvas>
 </div>
 <button id="plot">PLOT</button>
 <script>
-  $(document).ready(function () {
-    $("#plot").click(plotData)
+  $('#plot').on('click', function() {
+    plotData(['upstairs_bme688_temperature','upstairs_hdc302x_temperature']);
   });
 
-  async function getData() {
-    const xdata = [];
-    const ydata = [];
+  const chartAreaBorder = {
+    id: 'chartAreaBorder',
+    beforeDraw(chart, args, options) {
+      const {ctx, chartArea: {left, top, width, height}} = chart;
+      ctx.save();
+      ctx.strokeStyle = options.borderColor;
+      ctx.lineWidth = options.borderWidth;
+      ctx.setLineDash(options.borderDash || []);
+      ctx.lineDashOffset = options.borderDashOffset;
+      ctx.strokeRect(left, top, width, height);
+      ctx.restore();
+    }
+  };
+
+  const temperature_plot = new Chart($("#temperature_plot"), {
+    type: 'line',
+    data: {
+      datasets: [],
+    },
+    options: {
+      scales: {
+        x: {
+          type: 'time',
+        }
+      },
+      plugins: {
+        chartAreaBorder: {
+          borderColor: 'black',
+          borderWidth: 3,
+        }
+      }
+    },
+    plugins: [chartAreaBorder]
+  })
+
+  async function getData(sensor) {
+    const data = [];
     const resp = await $.ajax({
       url: "/",
       type: "POST",
       dataType: "text",
-      data: "plot",
+      data: sensor,
     })
-    console.log(resp);
-    const table = resp.split('\n').slice(1);
-    console.log(table)
+    //console.log(resp);
+    const table = resp.trim().split('\n').map(row => row.split(',').map(field => field.trim()));
+    //console.log(table)
     table.forEach(row => {
-      const columns = row.split(',');
-      console.log(columns)
-      const x = columns[0];
-      const y = columns[1];
-      console.log(x, y)
-      xdata.push(x);
-      ydata.push(y);
+      x = row[0];
+      y = parseFloat(row[1]);
+      //console.log(x, y);
+      data.push([x,y])
     });
-    console.log("returning");
-    return {xdata, ydata};
+    return data;
   }
 
-  async function plotData() {
-    const data = await getData();
-    console.log(data);
-    const ctx = document.getElementById('chart');
-
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: data.xdata,
-        datasets: [{
-          label: 'Sensor Data',
-          data: data.ydata,
-        }]
-      },
-      options: {
-        scales: {
-          x: {
-            type: 'time',
-            min: '2026-10-02 00:00:00',
-          }
+  async function plotData(sensors) {
+    for (const sensor of sensors) {
+      const data = await getData(sensor);
+      temperature_plot.data.datasets.push(
+        {
+          label: sensor,
+          data: data,
+          pointStyle: false,
         }
-      }
-    })
+      );
+    }
+    temperature_plot.update();
   }
 </script>
 </body>

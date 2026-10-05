@@ -12,15 +12,21 @@ DB_NAME = "sensor_data.db"      # the DB file
 MQTT_BROKER = "localhost"       # the MQTT server is running locally
 MQTT_TOPIC = "home/sensors/#"   # subscribe to anything under this topic
 
-def init_db():
-    """Create the DB if it does not already exist."""
+def add_sensor_value(sensor, value):
+    """Add sensor value"""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS readings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cursor.execute(f'''INSERT INTO {sensor} (value) VALUES ({value})''')
+    conn.commit()
+    conn.close()
+
+def add_table(sensor):
+    """Add new table"""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute(f'''
+        CREATE TABLE {sensor} (
             timestamp DATETIME DEFAULT (DATETIME('NOW', 'LOCALTIME')),
-            sensor TEXT,
             value FLOAT
         )
     ''')
@@ -30,26 +36,14 @@ def init_db():
 def on_message(client, userdata, message):
     """Parse the MQTT message and save to DB."""
     try:
-        print(message.topic)
-
-        # strip out the sensor name
         sensor = message.topic.lstrip(MQTT_TOPIC[:-1])
-
-        # sensor value
         value = float(message.payload)
-
         print(f"{sensor} = {value}")
-
-        # add to DB
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO readings (sensor, value) VALUES (?, ?)",
-            (sensor, value)
-        )
-        conn.commit()
-        conn.close()
-
+        add_sensor_value(sensor, value)
+    except sqlite3.OperationalError as e:
+        print(f"adding new table: {sensor}")
+        add_table(sensor)
+        add_sensor_value(sensor, value)
     except Exception as e:
         print(f"oops on_message: {e}")
 
@@ -57,9 +51,6 @@ def on_message(client, userdata, message):
 # M A I N
 #===================
 if __name__ == "__main__":
-    print("DB setup...")
-    init_db()
-
     print("MQTT setup...")
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     client.on_message = on_message
