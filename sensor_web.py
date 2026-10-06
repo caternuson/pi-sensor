@@ -20,12 +20,13 @@ class MainHandler(tornado.web.RequestHandler):
 
     def post(self):
         request_info = json.loads(self.request.body)
-        sensor = request_info["sensor"]
-        date = request_info["date"]
+        sensor = request_info.get("sensor")
+        date = request_info.get("date")
+        if sensor is None or date is None:
+            raise ValueError("Incomplete request sent.")
         SQL = f"SELECT * FROM {sensor} WHERE timestamp BETWEEN '{date} 00:00:00' AND '{date} 23:59:59'"
         conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        data = [ [row[0], row[1]] for row in cursor.execute(SQL) ]
+        data = [ [row[0], row[1]] for row in conn.execute(SQL) ]
         conn.close()
         self.write(json.dumps(data))
 

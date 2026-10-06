@@ -15,21 +15,19 @@ MQTT_TOPIC = "home/sensors/#"   # subscribe to anything under this topic
 def add_sensor_value(sensor, value):
     """Add sensor value"""
     conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute(f'''INSERT INTO {sensor} (value) VALUES ({value})''')
+    conn.execute(f"INSERT INTO {sensor} (value) VALUES ({value})")
     conn.commit()
     conn.close()
 
 def add_table(sensor):
     """Add new table"""
     conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute(f'''
+    conn.execute(f"""
         CREATE TABLE {sensor} (
             timestamp DATETIME DEFAULT (DATETIME('NOW', 'LOCALTIME')),
             value FLOAT
         )
-    ''')
+    """)
     conn.commit()
     conn.close()
 
