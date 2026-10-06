@@ -1,5 +1,11 @@
+#--------------------------------------------------------------------
+# Webserver for plotting sensor data.
+#
+# carter nelson
+# 2026/10/06
+#--------------------------------------------------------------------
+
 import os
-from datetime import datetime, timedelta
 import sqlite3
 import json
 import asyncio
@@ -7,39 +13,21 @@ import tornado
 
 DB_NAME = "sensor_data.db"      # the DB file
 
-ONE_DAY = timedelta(days=1)
-
 class MainHandler(tornado.web.RequestHandler):
 
     def get(self):
         self.render("data_plotter.html")
 
-    # def post(self):
-    #     sensor = self.request.body.decode('utf-8')
-    #     conn = sqlite3.connect(DB_NAME)
-    #     cursor = conn.cursor()
-    #     data = [ [row[0], row[1]] for row in cursor.execute(f"SELECT timestamp, value FROM {sensor}") ]
-    #     self.write(json.dumps(data))
-    #     conn.close()
-
     def post(self):
-        data_request = json.loads(self.request.body)
-        #print(data_request)
-        sensor = data_request["sensor"]
-        date1 = datetime.fromisoformat(data_request["date"])
-        date2 = date1 + ONE_DAY
-        #print(sensor, date1, date2)
-        start = date1.strftime("%Y-%m-%d")
-        end = date2.strftime("%Y-%m-%d")
-        #print(start, end)
+        request_info = json.loads(self.request.body)
+        sensor = request_info["sensor"]
+        date = request_info["date"]
+        SQL = f"SELECT * FROM {sensor} WHERE timestamp BETWEEN '{date} 00:00:00' AND '{date} 23:59:59'"
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
-        SQL = f"SELECT * FROM {sensor} WHERE timestamp >= DATE('{start}') AND timestamp < DATE('{end}')"
-        #print(SQL)
         data = [ [row[0], row[1]] for row in cursor.execute(SQL) ]
-        #print(data)
-        self.write(json.dumps(data))
         conn.close()
+        self.write(json.dumps(data))
 
 async def main():
     handlers = [
