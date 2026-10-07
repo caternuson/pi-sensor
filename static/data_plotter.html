@@ -8,24 +8,26 @@
 </head>
 <body>
 <center>
-<h1>Daily Plot</h1>
+<h1>Daily Plots</h1>
 <div>
 <button id="prev_day">PREV</button>
 <button id="today">TODAY</button>
 <button id="next_day">NEXT</button>
 </div>
 <div id="date">DATE</div>
-<div style="width:800px; height:400px">
+<div style="position: relative; width:80vw; height:50vh">
   <canvas id="temperature_plot"></canvas>
+</div>
+<div style="position: relative; width:80vw; height:50vh">
+  <canvas id="humidity_plot"></canvas>
 </div>
 </center>
 </body>
 <script>
-  const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
-  const plotDate = new Date(today);
+  const plotDate = new Date();
 
   $( document ).ready( function() {
-    updatePlots(today);
+    updatePlots(plotDate);
   });
 
   $('#prev_day').on('click', function() {
@@ -34,7 +36,7 @@
   });
 
   $('#today').on('click', function() {
-    plotDate.setDate(today.getDate());
+    plotDate.setTime(Date.now());
     updatePlots(plotDate);
   });
 
@@ -68,6 +70,47 @@
       scales: {
         x: {
           type: 'time',
+        },
+        y: {
+          title: {
+            text: 'Temperature (°C)',
+            display: true,
+            font: {
+              size: 16
+            }
+          }
+        }
+      },
+      plugins: {
+        chartAreaBorder: {
+          borderColor: 'black',
+          borderWidth: 3,
+        }
+      }
+    },
+    plugins: [chartAreaBorder]
+  })
+
+  const humidity_plot = new Chart($("#humidity_plot"), {
+    type: 'line',
+    data: {
+      datasets: [],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          type: 'time',
+        },
+        y: {
+          title: {
+            text: 'Relative Humidity (%)',
+            display: true,
+            font: {
+              size: 16
+            }
+          }
         }
       },
       plugins: {
@@ -98,19 +141,35 @@
 
     $('#date').text(day);
 
-    temperature_plot.data.datasets.length = 0;
+    temperature_plot.data.datasets= [];
     sensors = ['upstairs_bme688_temperature','upstairs_hdc302x_temperature']
     for (const sensor of sensors) {
+      si = sensor.indexOf('_temperature')
       const data = await getData(sensor, day);
       temperature_plot.data.datasets.push(
         {
-          label: sensor,
+          label: sensor.slice(0,si),
           data: data,
           pointStyle: false,
         }
       );
     }
     temperature_plot.update();
+
+    humidity_plot.data.datasets= [];
+    sensors = ['upstairs_bme688_relative_humidity','upstairs_hdc302x_relative_humidity']
+    for (const sensor of sensors) {
+      si = sensor.indexOf('_relative_humidity')
+      const data = await getData(sensor, day);
+      humidity_plot.data.datasets.push(
+        {
+          label: sensor.slice(0,si),
+          data: data,
+          pointStyle: false,
+        }
+      );
+    }
+    humidity_plot.update();
   }
 
 </script>
