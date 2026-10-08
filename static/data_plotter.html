@@ -6,7 +6,7 @@
   <script src={{ static_url("js/cdn.min.js") }}></script>
   <script src={{ static_url("js/chartjs-adapter-date-fns.min.js") }}></script>
 </head>
-<body>
+<body style="background-color: #eeeeee">
 <center>
 <h1>Daily Plots</h1>
 <div>
@@ -15,16 +15,23 @@
 <button id="next_day">NEXT</button>
 </div>
 <div id="date">DATE</div>
-<div style="position: relative; width:80vw; height:50vh">
-  <canvas id="temperature_plot"></canvas>
+<div style="position: relative; width:80vw; height:30vh">
+  <canvas id="chart1"></canvas>
 </div>
-<div style="position: relative; width:80vw; height:50vh">
-  <canvas id="humidity_plot"></canvas>
+<div style="position: relative; width:80vw; height:30vh">
+  <canvas id="chart2"></canvas>
+</div>
+<div style="position: relative; width:80vw; height:30vh">
+  <canvas id="chart3"></canvas>
 </div>
 </center>
 </body>
 <script>
-  const plotDate = new Date();
+  function today() {
+    return Date.now() - new Date().getTimezoneOffset() * 60000;
+  }
+
+  const plotDate = new Date(today());
 
   $( document ).ready( function() {
     updatePlots(plotDate);
@@ -36,7 +43,7 @@
   });
 
   $('#today').on('click', function() {
-    plotDate.setTime(Date.now());
+    plotDate.setTime(today());
     updatePlots(plotDate);
   });
 
@@ -45,94 +52,65 @@
     updatePlots(plotDate);
   });
 
-  const chartAreaBorder = {
-    id: 'chartAreaBorder',
+  const chartArea = {
+    id: 'chartArea',
     beforeDraw(chart, args, options) {
       const {ctx, chartArea: {left, top, width, height}} = chart;
       ctx.save();
+      ctx.fillStyle = options.backgroundColor;
+      ctx.fillRect(left, top, width, height);
       ctx.strokeStyle = options.borderColor;
       ctx.lineWidth = options.borderWidth;
-      ctx.setLineDash(options.borderDash || []);
-      ctx.lineDashOffset = options.borderDashOffset;
       ctx.strokeRect(left, top, width, height);
       ctx.restore();
     }
   };
 
-  const temperature_plot = new Chart($("#temperature_plot"), {
-    type: 'line',
-    data: {
-      datasets: [],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: {
-          type: 'time',
-        },
-        y: {
-          title: {
-            text: 'Temperature (°C)',
-            display: true,
-            font: {
-              size: 16
-            }
-          }
-        }
-      },
-      plugins: {
-        chartAreaBorder: {
-          borderColor: 'black',
-          borderWidth: 3,
-        }
-      }
-    },
-    plugins: [chartAreaBorder]
-  })
+  Chart.register(chartArea);
+  Chart.defaults.responsive = true
+  Chart.defaults.maintainAspectRatio = false
+  Chart.defaults.plugins.chartArea.borderColor = 'black'
+  Chart.defaults.plugins.chartArea.borderWidth = 3
+  Chart.defaults.plugins.chartArea.backgroundColor = 'white'
+  Chart.defaults.datasets.line.pointStyle = false
 
-  const humidity_plot = new Chart($("#humidity_plot"), {
-    type: 'line',
-    data: {
-      datasets: [],
+  const chart_config = [
+    {
+      chart: makeChart($("#chart1"), 'Temperature (°C)'),
+      sensors: ['upstairs_bme688_temperature','downstairs_bme680_temperature']
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: {
-          type: 'time',
-        },
-        y: {
-          title: {
-            text: 'Relative Humidity (%)',
-            display: true,
-            font: {
-              size: 16
-            }
-          }
-        }
-      },
-      plugins: {
-        chartAreaBorder: {
-          borderColor: 'black',
-          borderWidth: 3,
-        }
-      }
+    {
+      chart: makeChart($("#chart2"), 'Relative Humidity (%)'),
+      sensors: ['upstairs_bme688_relative_humidity','downstairs_bme680_relative_humidity']
     },
-    plugins: [chartAreaBorder]
-  })
-
-  async function getData(sensor, date) {
-    data_request = {
-      sensor: sensor,
-      date: date
+    {
+      chart: makeChart($("#chart3"), 'Pressure (hPa)'),
+      sensors: ['upstairs_bme688_pressure','downstairs_bme680_pressure']
     }
-    return await $.ajax({
-      url: "/",
-      type: "POST",
-      dataType: "json",
-      data: JSON.stringify(data_request)
+  ]
+
+function makeChart(ctx, title) {
+    return new Chart($(ctx), {
+      type: 'line',
+      data: {
+        datasets: [],
+      },
+      options: {
+        scales: {
+          x: {
+            type: 'time',
+          },
+          y: {
+            title: {
+              text: title,
+              display: true,
+              font: {
+                size: 16
+              }
+            }
+          }
+        }
+      }
     })
   }
 
@@ -141,37 +119,36 @@
 
     $('#date').text(day);
 
-    temperature_plot.data.datasets= [];
-    sensors = ['upstairs_bme688_temperature','upstairs_hdc302x_temperature']
-    for (const sensor of sensors) {
-      si = sensor.indexOf('_temperature')
-      const data = await getData(sensor, day);
-      temperature_plot.data.datasets.push(
-        {
-          label: sensor.slice(0,si),
-          data: data,
-          pointStyle: false,
-        }
-      );
+    for (const chart of chart_config) {
+      updatePlot(chart.chart, chart.sensors, day)
     }
-    temperature_plot.update();
-
-    humidity_plot.data.datasets= [];
-    sensors = ['upstairs_bme688_relative_humidity','upstairs_hdc302x_relative_humidity']
-    for (const sensor of sensors) {
-      si = sensor.indexOf('_relative_humidity')
-      const data = await getData(sensor, day);
-      humidity_plot.data.datasets.push(
-        {
-          label: sensor.slice(0,si),
-          data: data,
-          pointStyle: false,
-        }
-      );
-    }
-    humidity_plot.update();
   }
 
+  async function updatePlot(plot, sensors, day) {
+    plot.data.datasets = [];
+    for (const sensor of sensors) {
+      const data = await getData(sensor, day);
+      plot.data.datasets.push(
+        {
+          label: sensor,
+          data: data,
+        }
+      );
+    }
+    plot.update();
+  }
+
+  async function getData(sensor, date) {
+    return await $.ajax({
+      url: "/",
+      type: "POST",
+      dataType: "json",
+      data: JSON.stringify({
+        sensor: sensor,
+        date: date
+      })
+    })
+  }
 </script>
 </body>
 </html>
