@@ -34,7 +34,7 @@ def add_table(sensor):
 def on_message(client, userdata, message):
     """Parse the MQTT message and save to DB."""
     try:
-        sensor = message.topic.lstrip(MQTT_TOPIC[:-1])
+        sensor = message.topic[len(MQTT_TOPIC)-1:]
         value = float(message.payload)
         print(f"{sensor} = {value}")
         add_sensor_value(sensor, value)
