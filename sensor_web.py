@@ -24,7 +24,7 @@ class MainHandler(tornado.web.RequestHandler):
         date = request_info.get("date")
         if sensor is None or date is None:
             raise ValueError("Incomplete request sent.")
-        SQL = f"SELECT * FROM {sensor} WHERE timestamp BETWEEN '{date} 00:00:00' AND '{date} 23:59:59'"
+        SQL = f"SELECT * FROM {sensor} WHERE timestamp BETWEEN '{date} 00:00:00' AND '{date} 23:59:59' AND value > -999"
         conn = sqlite3.connect(DB_NAME)
         data = [ [row[0], row[1]] for row in conn.execute(SQL) ]
         conn.close()
