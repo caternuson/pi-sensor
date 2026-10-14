@@ -10,17 +10,19 @@ import json
 import sqlite3
 
 import board
-from digitalio import DigitalInOut, Direction, Pull
+from digitalio import DigitalInOut
 import adafruit_rfm9x
 
 DB_NAME = "sensor_data.db"      # the DB file
 
 # Radio setup
 RADIO_FREQ_MHZ = 915.0
-spi = board.SPI()
+HOME_NODE = 1
 CS = DigitalInOut(board.CE1)
 RESET = DigitalInOut(board.D25)
+spi = board.SPI()
 rfm9x = adafruit_rfm9x.RFM9x(spi, CS, RESET, RADIO_FREQ_MHZ)
+rfm9x.node = HOME_NODE
 
 def add_sensor_value(sensor, value):
     """Add sensor value"""
@@ -47,7 +49,7 @@ def add_table(sensor):
 if __name__ == "__main__":
     print("looping...")
     while True:
-        packet = rfm9x.receive()
+        packet = rfm9x.receive(with_ack=True)
         if packet is not None:
             try:
                 json_data = json.loads(packet.decode("utf-8"))
