@@ -11,7 +11,8 @@ import json
 import asyncio
 import tornado
 
-DB_NAME = "sensor_data.db"      # the DB file
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_NAME = SCRIPT_DIR + "/sensor_data.db"      # the DB file
 
 class MainHandler(tornado.web.RequestHandler):
 

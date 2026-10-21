@@ -5,6 +5,7 @@
 # 2026/10/11
 #--------------------------------------------------------------------
 
+import os
 import time
 import json
 import sqlite3
@@ -13,7 +14,8 @@ import board
 from digitalio import DigitalInOut
 import adafruit_rfm9x
 
-DB_NAME = "sensor_data.db"      # the DB file
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_NAME = SCRIPT_DIR + "/sensor_data.db"      # the DB file
 
 # Radio setup
 RADIO_FREQ_MHZ = 915.0
