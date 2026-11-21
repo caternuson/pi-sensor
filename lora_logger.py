@@ -9,6 +9,7 @@ import os
 import time
 import json
 import sqlite3
+from gpiozero import DigitalInputDevice
 
 import board
 from digitalio import DigitalInOut
@@ -22,6 +23,7 @@ RADIO_FREQ_MHZ = 915.0
 HOME_NODE = 1
 CS = DigitalInOut(board.CE1)
 RESET = DigitalInOut(board.D25)
+IRQ = DigitalInputDevice(22, pull_up=False)
 spi = board.SPI()
 rfm9x = adafruit_rfm9x.RFM9x(spi, CS, RESET, RADIO_FREQ_MHZ)
 rfm9x.node = HOME_NODE
@@ -45,23 +47,29 @@ def add_table(sensor):
     conn.commit()
     conn.close()
 
+def process_packet(packet):
+    if packet is not None:
+        try:
+            json_data = json.loads(packet.decode("utf-8"))
+            sensor = json_data.get('sensor')
+            value = float(json_data.get('value'))
+            print(f"{sensor} = {value}")
+            add_sensor_value(sensor, value)
+        except sqlite3.OperationalError as e:
+            print(f"adding new table: {sensor}")
+            add_table(sensor)
+            add_sensor_value(sensor, value)
+        except Exception as e:
+            print(f"Oops!!! {e}")
+
 #===================
 # M A I N
 #===================
 if __name__ == "__main__":
+    print("reading RX to clear IRQ")
+    print(rfm9x.receive(with_ack=True))
     print("looping...")
     while True:
+        IRQ.wait_for_active()
         packet = rfm9x.receive(with_ack=True)
-        if packet is not None:
-            try:
-                json_data = json.loads(packet.decode("utf-8"))
-                sensor = json_data.get('sensor')
-                value = float(json_data.get('value'))
-                print(f"{sensor} = {value}")
-                add_sensor_value(sensor, value)
-            except sqlite3.OperationalError as e:
-                print(f"adding new table: {sensor}")
-                add_table(sensor)
-                add_sensor_value(sensor, value)
-            except Exception as e:
-                print(f"Oops!!! {e}")
+        process_packet(packet)
